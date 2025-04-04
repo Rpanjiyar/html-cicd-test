@@ -19,7 +19,6 @@ jobs:
           host: ${{ secrets.LOCAL_HOST }}
           username: ${{ secrets.LOCAL_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          shell: powershell
           script: |
             cd C:\html-cicd-test
             git pull origin master
