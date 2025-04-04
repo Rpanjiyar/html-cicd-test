@@ -1,0 +1,25 @@
+name: Deploy to Windows
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy via SSH to Windows
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.LOCAL_HOST }}
+          username: ${{ secrets.LOCAL_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          shell: powershell
+          script: |
+            cd C:\html-cicd-test
+            git pull origin master
