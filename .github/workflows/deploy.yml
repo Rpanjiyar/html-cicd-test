@@ -1,32 +1,18 @@
-name: CI + Deploy to Windows + Email Report
+name: Hello World CI/CD
 
 on:
   push:
     branches: [ master ]
 
 jobs:
-  test-deploy-email:
+  deploy-and-email:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-
-      - name: Run Playwright tests
-        run: npm run test
-
-      - name: Deploy via SSH to Windows
+      - name: Deploy to Windows via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.LOCAL_HOST }}
@@ -39,7 +25,7 @@ jobs:
               git pull origin master;
             "
 
-      - name: Send test report via email
+      - name: Send email notification
         if: always()
         uses: dawidd6/action-send-mail@v3
         with:
@@ -47,14 +33,14 @@ jobs:
           server_port: 465
           username: ${{ secrets.EMAIL_USER }}
           password: ${{ secrets.EMAIL_PASS }}
-          subject: Test Report for ${{ github.ref }}
+          subject: Hello World Deploy Notification
           to: panjiyar17251@gmail.com
           from: CI Bot <${{ secrets.EMAIL_USER }}>
-          attachments: test-results/cucumber-report.html
           body: |
             Hello,
 
-            The test report for version ${{ github.ref }} is attached.
+            Your "Hello World" project has been deployed to the Windows server.
 
-            Best,
-            Your GitHub Actions CI/CD Pipeline
+            ✅ Deployment Successful!
+
+            - GitHub Actions
