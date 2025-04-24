@@ -1,0 +1,24 @@
+name: Developer Pipeline
+
+on:
+  push:
+    branches:
+      - main  
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Simulate Build or Lint
+        run: echo "Running build or checks..."
+
+      - name: Trigger Tester Repo Workflow
+        run: |
+          curl -X POST https://api.github.com/repos/Indra512/PlaywrightCucumberTypeScript/dispatches \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: token ${{ secrets.TEST_REPO_PAT }}" \
+          -d '{"event_type":"dev-completed"}'
