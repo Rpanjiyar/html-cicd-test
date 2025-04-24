@@ -1,4 +1,4 @@
-name: Hello World CI/CD
+name: Hello World Static Site CI/CD
 
 on:
   push:
@@ -11,14 +11,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-
-      - name: Install dependencies
-        run: npm install
 
       - name: Deploy to Windows via SSH
         uses: appleboy/ssh-action@v1.0.0
@@ -41,12 +33,15 @@ jobs:
           server_port: 465
           username: ${{ secrets.EMAIL_USER }}
           password: ${{ secrets.EMAIL_PASS }}
-          subject: Hello World Deploy Notification
+          subject: Hello World Site Deployed!
           to: panjiyar17251@gmail.com
           from: CI Bot <${{ secrets.EMAIL_USER }}>
           body: |
             Hello,
 
-            Your "Hello World" project has been deployed to the Windows server.
+            Your static HTML site has been successfully deployed to the Windows server.
 
-            ✅ Deployment Successful!
+            ✅ Page: "Hello from Raushan!" – Version 1.0
+
+            Cheers,
+            GitHub Actions
