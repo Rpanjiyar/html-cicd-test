@@ -12,6 +12,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm install
+
       - name: Deploy to Windows via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -42,5 +50,3 @@ jobs:
             Your "Hello World" project has been deployed to the Windows server.
 
             ✅ Deployment Successful!
-
-            - GitHub Actions
