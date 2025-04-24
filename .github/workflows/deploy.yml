@@ -34,7 +34,7 @@ jobs:
           username: ${{ secrets.EMAIL_USER }}
           password: ${{ secrets.EMAIL_PASS }}
           subject: Hello World Site Deployed!
-          to: panjiyar17251@gmail.com
+          to: raushan.teknotrait@gmail.com
           from: CI Bot <${{ secrets.EMAIL_USER }}>
           body: |
             Hello,
