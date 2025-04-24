@@ -2,7 +2,7 @@ name: Version Release CI
 
 on:
   push:
-    branches: [dev]
+    branches: [ master]
 
 jobs:
   test-and-email:
@@ -35,7 +35,7 @@ jobs:
           username: ${{ secrets.EMAIL_USER }}
           password: ${{ secrets.EMAIL_PASS }}
           subject: Test Report for ${{ github.ref }}
-          to: mapleclub512@gmail.com
+          to: panjiyar17251@gmail.com
           from: CI Bot <${{ secrets.EMAIL_USER }}>
           attachments: test-results/cucumber-report.html
           body: |
