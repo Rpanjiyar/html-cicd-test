@@ -51,25 +51,25 @@
     <div class="row g-4 mb-4">
       <div class="col-md-3">
         <div class="card text-center p-4">
-          <h4 class="text-primary">1,250</h4>
+          <h4 class="text-primary" id="stockCount">Loading...</h4>
           <p class="text-muted mb-0">Items in Stock</p>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card text-center p-4">
-          <h4 class="text-warning">84</h4>
+          <h4 class="text-warning" id="pendingOrders">Loading...</h4>
           <p class="text-muted mb-0">Pending Orders</p>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card text-center p-4">
-          <h4 class="text-success">36</h4>
+          <h4 class="text-success" id="shipments">Loading...</h4>
           <p class="text-muted mb-0">Shipments</p>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card text-center p-4">
-          <h4 class="text-info">18</h4>
+          <h4 class="text-info" id="suppliers">Loading...</h4>
           <p class="text-muted mb-0">Suppliers</p>
         </div>
       </div>
@@ -96,33 +96,53 @@
               <th>Expected Arrival</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td><a href="#">SHIP1234</a></td>
-              <td>New York</td>
-              <td><span class="status-badge status-in-transit">In Transit</span></td>
-              <td>May 2, 2025</td>
-            </tr>
-            <tr>
-              <td><a href="#">SHIP1235</a></td>
-              <td>San Francisco</td>
-              <td><span class="status-badge status-delayed">Delayed</span></td>
-              <td>May 5, 2025</td>
-            </tr>
-            <tr>
-              <td><a href="#">SHIP1236</a></td>
-              <td>Dallas</td>
-              <td><span class="status-badge status-dispatched">Dispatched</span></td>
-              <td>May 1, 2025</td>
-            </tr>
+          <tbody id="shipmentTable">
+            <tr><td colspan="4">Loading...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- Chart Script -->
+  <!-- Simulated Backend Data -->
   <script>
+    const dashboardData = {
+      stock: 1250,
+      pendingOrders: 84,
+      shipments: 36,
+      suppliers: 18,
+      monthlyOrders: [300, 450, 520, 680, 1000, 900, 750, 700, 790, 850, 900, 920],
+      recentShipments: [
+        { id: "SHIP1234", destination: "New York", status: "In Transit", arrival: "May 2, 2025" },
+        { id: "SHIP1235", destination: "San Francisco", status: "Delayed", arrival: "May 5, 2025" },
+        { id: "SHIP1236", destination: "Dallas", status: "Dispatched", arrival: "May 1, 2025" },
+      ]
+    };
+
+    // Populate stat cards
+    document.getElementById("stockCount").innerText = dashboardData.stock;
+    document.getElementById("pendingOrders").innerText = dashboardData.pendingOrders;
+    document.getElementById("shipments").innerText = dashboardData.shipments;
+    document.getElementById("suppliers").innerText = dashboardData.suppliers;
+
+    // Fill recent shipments
+    const shipmentTable = document.getElementById("shipmentTable");
+    shipmentTable.innerHTML = "";
+    dashboardData.recentShipments.forEach(shipment => {
+      const badgeClass = shipment.status === 'In Transit' ? 'status-in-transit'
+        : shipment.status === 'Delayed' ? 'status-delayed'
+        : 'status-dispatched';
+
+      shipmentTable.innerHTML += `
+        <tr>
+          <td><a href="#">${shipment.id}</a></td>
+          <td>${shipment.destination}</td>
+          <td><span class="status-badge ${badgeClass}">${shipment.status}</span></td>
+          <td>${shipment.arrival}</td>
+        </tr>`;
+    });
+
+    // Render chart
     const ctx = document.getElementById('orderChart').getContext('2d');
     new Chart(ctx, {
       type: 'bar',
@@ -130,23 +150,15 @@
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         datasets: [{
           label: 'Orders',
-          data: [300, 450, 520, 680, 1000, 900, 750, 700, 790, 850, 900, 920],
+          data: dashboardData.monthlyOrders,
           backgroundColor: '#007bff',
           borderRadius: 8
         }]
       },
       options: {
         responsive: true,
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        }
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
       }
     });
   </script>
