@@ -6,7 +6,7 @@ on:
 
 jobs:
   sonarqube:
-    name: SonarCloud Analysis
+    name: SonarQube Analysis
     runs-on: ubuntu-latest
 
     steps:
@@ -26,9 +26,4 @@ jobs:
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
-        sonar-scanner \
-          -Dsonar.organization=testweb \
-          -Dsonar.projectKey=html-cicd-test \
-          -Dsonar.sources=. \
-          -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.login=$SONAR_TOKEN
+        sonar-scanner
