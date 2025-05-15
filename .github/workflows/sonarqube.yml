@@ -6,7 +6,7 @@ on:
 
 jobs:
   sonarqube:
-    name: SonarCloud Analysis
+    name: SonarQube Analysis
     runs-on: ubuntu-latest
 
     steps:
@@ -25,10 +25,30 @@ jobs:
     - name: Run SonarScanner
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        SONAR_ORG: ${{ secrets.SONAR_ORG }}
+        SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
       run: |
-        sonar-scanner \
-          -Dsonar.organization=your-org-key \
-          -Dsonar.projectKey=your-project-key \
+        # Set default host if not provided
+        if [ -z "$SONAR_HOST_URL" ]; then
+          SONAR_HOST_URL="http://localhost:9000"
+        fi
+
+        # Prepare base command
+        CMD="sonar-scanner \
           -Dsonar.sources=. \
-          -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.login=$SONAR_TOKEN
+          -Dsonar.host.url=$SONAR_HOST_URL \
+          -Dsonar.token=$SONAR_TOKEN"
+
+        # Add org if provided
+        if [ ! -z "$SONAR_ORG" ]; then
+          CMD="$CMD -Dsonar.organization=$SONAR_ORG"
+        fi
+
+        # Add projectKey if provided
+        if [ ! -z "$SONAR_PROJECT_KEY" ]; then
+          CMD="$CMD -Dsonar.projectKey=$SONAR_PROJECT_KEY"
+        fi
+
+        echo "Running: $CMD"
+        eval $CMD
