@@ -27,6 +27,11 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
       run: |
+        # Use default SonarQube URL if SONAR_HOST_URL is empty
+        if [ -z "$SONAR_HOST_URL" ]; then
+          SONAR_HOST_URL="http://localhost:9000"
+        fi
+
         sonar-scanner \
-          -Dsonar.login=$SONAR_TOKEN \
+          -Dsonar.token=$SONAR_TOKEN \
           -Dsonar.host.url=$SONAR_HOST_URL
