@@ -1,4 +1,4 @@
-name: SonarQube Scan
+name: SonarCloud Scan
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   sonarqube:
-    name: SonarQube Analysis
+    name: SonarCloud Analysis
     runs-on: ubuntu-latest
 
     steps:
@@ -19,36 +19,14 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Install SonarScanner CLI
+    - name: Install SonarCloud Scanner
       run: npm install -g sonarqube-scanner
 
-    - name: Run SonarScanner
+    - name: Run SonarCloud Scanner
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        SONAR_ORG: ${{ secrets.SONAR_ORG }}
-        SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
       run: |
-        # Set default host if not provided
-        if [ -z "$SONAR_HOST_URL" ]; then
-          SONAR_HOST_URL="http://localhost:9000"
-        fi
-
-        # Prepare base command
-        CMD="sonar-scanner \
+        sonar-scanner \
           -Dsonar.sources=. \
-          -Dsonar.host.url=$SONAR_HOST_URL \
-          -Dsonar.token=$SONAR_TOKEN"
-
-        # Add org if provided
-        if [ ! -z "$SONAR_ORG" ]; then
-          CMD="$CMD -Dsonar.organization=$SONAR_ORG"
-        fi
-
-        # Add projectKey if provided
-        if [ ! -z "$SONAR_PROJECT_KEY" ]; then
-          CMD="$CMD -Dsonar.projectKey=$SONAR_PROJECT_KEY"
-        fi
-
-        echo "Running: $CMD"
-        eval $CMD
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.login=$SONAR_TOKEN
