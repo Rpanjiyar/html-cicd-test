@@ -12,17 +12,21 @@
       background-color: #f0f2f5;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
+
     .dashboard-header {
       padding: 20px 0;
     }
+
     .card {
       border: none;
       border-radius: 1rem;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
+
     .card h4 {
       font-weight: 600;
     }
+
     .status-badge {
       padding: 6px 12px;
       border-radius: 30px;
@@ -30,9 +34,19 @@
       font-size: 0.85rem;
       font-weight: 500;
     }
-    .status-in-transit { background-color: #ffc107; }
-    .status-delayed { background-color: #dc3545; }
-    .status-dispatched { background-color: #28a745; }
+
+    .status-in-transit {
+      background-color: #ffc107;
+    }
+
+    .status-delayed {
+      background-color: #dc3545;
+    }
+
+    .status-dispatched {
+      background-color: #28a745;
+    }
+
     .chart-container {
       position: relative;
       height: 300px;
@@ -41,30 +55,31 @@
 </head>
 
 <body>
+  <font color="red">Deprecated tag example</font> <!-- Deprecated tag -->
   <div class="container py-4">
     <div class="dashboard-header d-flex justify-content-between align-items-center">
-      <h2 class="fw-bold">📦 Supply Chain Management Dashboard</h2>
-      <button class="btn btn-outline-primary">Log</button>
+      <h2 class="fw-bold" id="headerTitle">📦 Supply Chain Management Dash</h2>
+      <button class="btn btn-outline-primary" onclick="alert('Logged!')">Log</button> <!-- Inline JS -->
     </div>
 
     <!-- Stat Cards -->
     <div class="row g-4 mb-4">
       <div class="col-md-3">
         <div class="card text-center p-4">
-          <h4 class="text-primary">1,280</h4>
+          <h4 class="text-primary" id="statId">1,270</h4> <!-- Duplicate ID -->
           <p class="text-muted mb-0">Items in Stock</p>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card text-center p-4">
-          <h4 class="text-warning">84</h4>
+          <h4 class="text-warning" id="statId">84</h4> <!-- Duplicate ID -->
           <p class="text-muted mb-0">Pending Orders</p>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card text-center p-4">
           <h4 class="text-success">36</h4>
-          <p class="text-muted mb-0">Shipments</p>
+          <p class="text-muted mb-0" style="color:blue;">Shipments</p> <!-- Inline style -->
         </div>
       </div>
       <div class="col-md-3">
@@ -74,6 +89,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Broken Image -->
+    <img src="missing.jpg" />
 
     <!-- Charts -->
     <div class="row g-4 mb-4">
@@ -128,19 +146,19 @@
           </thead>
           <tbody>
             <tr>
-              <td><a href="#">SHIP1234</a></td>
+              <td><a href="">SHIP1234</a></td> <!-- Empty href -->
               <td>New York</td>
               <td><span class="status-badge status-in-transit">In Transit</span></td>
               <td>May 2, 2025</td>
             </tr>
             <tr>
-              <td><a href="#">SHIP1235</a></td>
+              <td><a href="">SHIP1235</a></td>
               <td>San Francisco</td>
               <td><span class="status-badge status-delayed">Delayed</span></td>
               <td>May 5, 2025</td>
             </tr>
             <tr>
-              <td><a href="#">SHIP1236</a></td>
+              <td><a href="">SHIP1236</a></td>
               <td>Dallas</td>
               <td><span class="status-badge status-dispatched">Dispatched</span></td>
               <td>May 1, 2025</td>
@@ -150,17 +168,11 @@
       </div>
     </div>
   </div>
-  <div>
-    <form action="http://malicious-site.com">
-  <input type="text" name="username">
-  <input type="submit" value="Submit">
-</form>
-    <input type="text" value="<script>alert('XSS')</script>">
-    <button onclick="alert('You clicked me!')">Click Me</button>
-  </div>
 
   <!-- Chart Scripts -->
   <script>
+    let unusedVar = 123; // Unused variable for SonarQube to detect
+
     new Chart(document.getElementById('orderChart'), {
       type: 'bar',
       data: {
@@ -172,7 +184,18 @@
           borderRadius: 8
         }]
       },
-      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      options: {
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
     });
 
     new Chart(document.getElementById('inventoryChart'), {
@@ -187,7 +210,9 @@
           tension: 0.4
         }]
       },
-      options: { responsive: true }
+      options: {
+        responsive: true
+      }
     });
 
     new Chart(document.getElementById('shipmentPieChart'), {
@@ -204,13 +229,12 @@
     new Chart(document.getElementById('supplierChart'), {
       type: 'doughnut',
       data: {
-        labels: ['Supplier A', 'Supplier B', 'Supplier C', 'Supplier D'],
+        labels: ['Supplier A', 'Supplier B', 'Supplier C'],
         datasets: [{
-          data: [35, 25, 20, 20],
-          backgroundColor: ['#17a2b8', '#007bff', '#6610f2', '#20c997']
+          data: [60, 25, 15],
+          backgroundColor: ['#17a2b8', '#6c757d', '#fd7e14']
         }]
-      },
-      options: { cutout: '70%' }
+      }
     });
   </script>
 </body>
