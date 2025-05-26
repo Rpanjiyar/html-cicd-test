@@ -3,16 +3,39 @@ name: Developer Pipeline
 on:
   push:
     branches:
-      - master  
+      - master
 
 jobs:
-  build:
+  sonarcloud:
+    name: SonarCloud Analysis
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # change as per your project
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          organization: your_organization
+          projectKey: your_project_key
+          token: ${{ secrets.SONAR_TOKEN }}
+
+  trigger-tester-repo:
+    name: Trigger Tester Repo
+    needs: sonarcloud
+    runs-on: ubuntu-latest
+    if: success()  # Only run if SonarCloud job passed
+
+    steps:
       - name: Simulate Build or Lint
         run: echo "Running build or checks..."
 
