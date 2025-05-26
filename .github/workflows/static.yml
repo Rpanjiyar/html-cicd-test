@@ -1,4 +1,4 @@
-name: Static Site CI/CD
+name: Static Site CI/CD with SonarCloud
 
 on:
   push:
@@ -15,8 +15,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy-and-notify:
+  sonarcloud:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm install
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  deploy-and-notify:
+    needs: sonarcloud
+    runs-on: ubuntu-latest
+    if: success()  # Only run if sonarcloud passed
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -31,7 +46,7 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'  # Change this if your site is in a subfolder like 'dist/'
+          path: '.'  # Change if your site is in a subfolder
 
       - name: Deploy to GitHub Pages
         id: deployment
