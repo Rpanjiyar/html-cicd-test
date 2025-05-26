@@ -1,29 +1,56 @@
-name: SonarQube Scan
+name: CI with SonarCloud and Deployment
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - main
 
 jobs:
-  sonarqube:
-    name: SonarQube Analysis
+  sonarcloud:
+    name: SonarCloud Analysis
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-    - name: Set up Java (needed by SonarScanner)
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Set up Node (or Java, Python, etc.)
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-    - name: Install SonarScanner CLI
-      run: npm install -g sonarqube-scanner
+      - name: Install dependencies
+        run: npm install
 
-    - name: Run SonarScanner
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      run: |
-        sonar-scanner
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          organization: your_organization
+          projectKey: your_project_key
+          token: ${{ secrets.SONAR_TOKEN }}
+
+  deploy:
+    name: Deploy to GitHub Pages and Trigger Tester
+    needs: sonarcloud
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build Static Site
+        run: |
+          npm run build  # or your static site build command
+          cp -r build/ public/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+
+      - name: Trigger Tester Repo Workflow
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          repository: your-org/tester-repo
+          event-type: sonar-pass
