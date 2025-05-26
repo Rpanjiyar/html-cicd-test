@@ -24,7 +24,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run SonarCloud Scan
+      - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -33,9 +33,12 @@ jobs:
         id: quality-gate
         uses: SonarSource/sonarqube-quality-gate-action@v1.1.0
         with:
-          scanTimeout: 300  # Wait up to 5 minutes
+          scanTimeout: 300
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Debug Quality Gate output
+        run: echo "Quality Gate Status = ${{ steps.quality-gate.outputs.quality_gate_status }}"
 
   deploy-and-notify:
     needs: sonarcloud
@@ -55,7 +58,7 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'  # path to your static site
+          path: '.'  # root directory with your static HTML files (index.html, etc)
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -68,7 +71,8 @@ jobs:
           -H "Authorization: token ${{ secrets.TEST_REPO_PAT }}" \
           -d '{"event_type":"dev-completed"}'
 
-      - name: Send Email Notification
+      - name: Send email notification
+        if: always()
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
