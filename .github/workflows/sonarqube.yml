@@ -13,6 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
       - name: Run SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
@@ -27,11 +35,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Prepare Public Folder
+      - name: Build Static Site
         run: |
-          mkdir -p public
-          cp -r * public/
-          rm -rf public/.git public/.github
+          npm run build  # or replace with your actual build steps
+          cp -r build/ public/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
