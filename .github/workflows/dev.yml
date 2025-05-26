@@ -3,7 +3,7 @@ name: Developer Pipeline
 on:
   push:
     branches:
-      - master
+      - dev
 
 jobs:
   sonarcloud:
