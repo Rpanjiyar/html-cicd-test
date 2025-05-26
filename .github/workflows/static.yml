@@ -1,8 +1,9 @@
-name: Static Site CI/CD with SonarCloud
+name: CI with SonarCloud, Deploy to GitHub Pages, Trigger Tester, and Notify
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
   workflow_dispatch:
 
 permissions:
@@ -16,25 +17,35 @@ concurrency:
 
 jobs:
   sonarcloud:
+    name: SonarCloud Analysis
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - run: npm install
-      - name: SonarCloud Scan
+
+      - name: Install dependencies
+        run: npm install
+        # If package.json is in a subfolder, add: working-directory: ./subfolder
+
+      - name: Run SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  deploy-and-notify:
+  deploy:
+    name: Deploy to GitHub Pages
     needs: sonarcloud
     runs-on: ubuntu-latest
-    if: success()  # Only run if sonarcloud passed
+    if: success()  # only run if sonarcloud passed
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deploy-pages.outputs.page_url }}
 
     steps:
       - name: Checkout code
@@ -46,14 +57,34 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'  # Change if your site is in a subfolder
+          path: '.'  # Change this if your static site is in a subfolder
 
       - name: Deploy to GitHub Pages
-        id: deployment
+        id: deploy-pages
         uses: actions/deploy-pages@v4
 
+  trigger-tester-repo:
+    name: Trigger Tester Repo Workflow
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Trigger Tester Repo Workflow
+        run: |
+          curl -X POST https://api.github.com/repos/Indra512/PlaywrightCucumberTypeScript/dispatches \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: token ${{ secrets.TEST_REPO_PAT }}" \
+          -d '{"event_type":"dev-completed"}'
+
+  notify:
+    name: Send Deployment Notification Email
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()  # Always run to notify even if deployment failed
+
+    steps:
       - name: Send email notification
-        if: always()
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -70,7 +101,7 @@ jobs:
 
             ✅ Commit: ${{ github.sha }}
             🕒 Time: ${{ github.event.head_commit.timestamp }}
-            🌐 URL: ${{ steps.deployment.outputs.page_url }}
+            🌐 URL: ${{ needs.deploy.outputs.page_url }}
 
             Cheers,
             GitHub Actions
