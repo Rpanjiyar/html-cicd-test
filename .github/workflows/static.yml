@@ -30,7 +30,7 @@ jobs:
   deploy-and-notify:
     needs: sonarcloud
     runs-on: ubuntu-latest
-    if: success()  # Run only if SonarCloud scan passed
+    if: success()  # 💡 Only runs if SonarCloud job succeeded
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -45,7 +45,7 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'  # root directory with your static HTML files
+          path: '.'  # your static HTML location
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -59,7 +59,7 @@ jobs:
           -d '{"event_type":"dev-completed"}'
 
       - name: Send email notification
-        if: always()
+        if: success()  # 💡 Only if deploy also succeeded
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
