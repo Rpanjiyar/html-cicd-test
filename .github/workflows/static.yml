@@ -18,19 +18,29 @@ concurrency:
 jobs:
   sonarcloud:
     runs-on: ubuntu-latest
+    outputs:
+      quality_gate: ${{ steps.quality-gate.outputs.quality_gate_status }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: SonarCloud Scan
+      - name: Run SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Wait for Quality Gate result
+        id: quality-gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1.1.0
+        with:
+          scanTimeout: 300  # Wait up to 5 minutes
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   deploy-and-notify:
     needs: sonarcloud
     runs-on: ubuntu-latest
-    if: success()  # 💡 Only runs if SonarCloud job succeeded
+    if: needs.sonarcloud.outputs.quality_gate == 'PASSED'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -45,7 +55,7 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'  # your static HTML location
+          path: '.'  # path to your static site
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -58,8 +68,7 @@ jobs:
           -H "Authorization: token ${{ secrets.TEST_REPO_PAT }}" \
           -d '{"event_type":"dev-completed"}'
 
-      - name: Send email notification
-        if: success()  # 💡 Only if deploy also succeeded
+      - name: Send Email Notification
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
