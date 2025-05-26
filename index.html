@@ -51,44 +51,35 @@
       position: relative;
       height: 300px;
     }
-
-    .text-blue {
-      color: blue;
-    }
-
-    .stat-value {
-      /* Optionally style stat values uniformly */
-    }
   </style>
 </head>
 
 <body>
-  <p class="text-danger">Deprecated tag example</p> <!-- Fixed deprecated tag -->
-
+  <font color="red">Deprecated tag example</font> <!-- Deprecated tag -->
   <div class="container py-4">
     <div class="dashboard-header d-flex justify-content-between align-items-center">
       <h2 class="fw-bold" id="headerTitle">📦 Supply Chain Management Dashboard</h2>
-      <button class="btn btn-outline-primary" id="logBtn">Log</button> <!-- Removed inline JS -->
+      <button class="btn btn-outline-primary" onclick="alert('Logged!')">Log</button> <!-- Inline JS -->
     </div>
 
     <!-- Stat Cards -->
     <div class="row g-4 mb-4">
       <div class="col-md-3">
         <div class="card text-center p-4">
-          <h4 class="stat-value text-primary">1,270</h4> <!-- Unique class instead of duplicate ID -->
+          <h4 class="text-primary" id="statId">1,270</h4> <!-- Duplicate ID -->
           <p class="text-muted mb-0">Items in Stock</p>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card text-center p-4">
-          <h4 class="stat-value text-warning">84</h4>
+          <h4 class="text-warning" id="statId">84</h4> <!-- Duplicate ID -->
           <p class="text-muted mb-0">Pending Orders</p>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card text-center p-4">
           <h4 class="text-success">36</h4>
-          <p class="text-muted mb-0 text-blue">Shipments</p> <!-- Moved inline style to class -->
+          <p class="text-muted mb-0" style="color:blue;">Shipments</p> <!-- Inline style -->
         </div>
       </div>
       <div class="col-md-3">
@@ -99,8 +90,8 @@
       </div>
     </div>
 
-    <!-- Broken Image with alt and onerror -->
-    <img src="missing.jpg" alt="Image not available" onerror="this.style.display='none';" />
+    <!-- Broken Image -->
+    <img src="missing.jpg" />
 
     <!-- Charts -->
     <div class="row g-4 mb-4">
@@ -155,19 +146,19 @@
           </thead>
           <tbody>
             <tr>
-              <td><a href="#" onclick="return false;">SHIP1234</a></td> <!-- Fixed empty href -->
+              <td><a href="">SHIP1234</a></td> <!-- Empty href -->
               <td>New York</td>
               <td><span class="status-badge status-in-transit">In Transit</span></td>
               <td>May 2, 2025</td>
             </tr>
             <tr>
-              <td><a href="#" onclick="return false;">SHIP1235</a></td>
+              <td><a href="">SHIP1235</a></td>
               <td>San Francisco</td>
               <td><span class="status-badge status-delayed">Delayed</span></td>
               <td>May 5, 2025</td>
             </tr>
             <tr>
-              <td><a href="#" onclick="return false;">SHIP1236</a></td>
+              <td><a href="">SHIP1236</a></td>
               <td>Dallas</td>
               <td><span class="status-badge status-dispatched">Dispatched</span></td>
               <td>May 1, 2025</td>
@@ -180,12 +171,9 @@
 
   <!-- Chart Scripts -->
   <script>
-    // Attach event listener instead of inline JS
-    document.getElementById('logBtn').addEventListener('click', () => {
-      alert('Logged!');
-    });
+    // Removed unused variable 'unusedVar' to avoid SonarCloud warning
 
-    // Store chart instances in variables to fix SonarCloud "unused object" warning
+    // Assign Chart instances to variables to prevent SonarCloud "unused object" warning
     const orderChart = new Chart(document.getElementById('orderChart'), {
       type: 'bar',
       data: {
@@ -199,10 +187,14 @@
       },
       options: {
         plugins: {
-          legend: { display: false }
+          legend: {
+            display: false
+          }
         },
         scales: {
-          y: { beginAtZero: true }
+          y: {
+            beginAtZero: true
+          }
         }
       }
     });
