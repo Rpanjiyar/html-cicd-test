@@ -171,6 +171,9 @@
       alert('Logged!');
     });
 
+    // Intentional error to fail SonarCloud: using undeclared variable
+    console.log(notDeclaredVariable);
+
     new Chart(document.getElementById('orderChart'), {
       type: 'bar',
       data: {
