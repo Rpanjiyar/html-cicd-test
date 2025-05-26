@@ -3,7 +3,7 @@ name: CI with SonarCloud and Deployment
 on:
   push:
     branches:
-      - main
+      - dev
 
 jobs:
   sonarcloud:
