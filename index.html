@@ -2,116 +2,58 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventory Dashboard</title>
+  <title>Broken Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f6f9;
-      margin: 0;
-      padding: 2rem;
-    }
-    h1 {
-      text-align: center;
-    }
-    .dashboard {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 2rem;
-      margin-top: 2rem;
-    }
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 1rem;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    canvas {
-      max-width: 100%;
-    }
-    .footer {
-      text-align: center;
-      margin-top: 3rem;
-    }
-    .footer button {
-      padding: 0.6rem 1.2rem;
-      border: none;
-      background-color: #007bff;
-      color: white;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-  </style>
 </head>
 <body>
-  <h1>Inventory Management Dashboard</h1>
-  <div class="dashboard">
-    <div class="card">
-      <h3>Monthly Orders</h3>
-      <canvas id="orderChart"></canvas>
-    </div>
-    <div class="card">
-      <h3>Inventory Trends</h3>
-      <canvas id="inventoryChart"></canvas>
-    </div>
-  </div>
-  <div class="footer">
-    <button id="logBtn">Log Action</button>
-  </div>
+  <h1>SonarCloud Failing Demo</h1>
+  <canvas id="buggyChart"></canvas>
 
   <script>
-    document.getElementById('logBtn').addEventListener('click', () => {
-      alert('Logged!');
-    });
+    // ❌ Issue 1: Unused variable
+    const notUsed = 'This is not used anywhere';
 
-    // ❌ Intentional issue for SonarCloud: unused variable
-    let unusedVariable = 42;
+    // ❌ Issue 2: Unreachable code
+    function unreachableExample() {
+      return;
+      console.log("This will never be called"); // SonarCloud should flag this
+    }
 
-    new Chart(document.getElementById('orderChart'), {
-      type: 'bar',
+    // ❌ Issue 3: Bad practice - console.log
+    console.log("This is a bad practice according to many code standards");
+
+    // ❌ Issue 4: Inefficient code (detected as code smell)
+    var total = 0;
+    for (var i = 0; i < 10; i++) {
+      total = total + 0; // pointless operation
+    }
+
+    // ❌ Issue 5: Empty function
+    function emptyFunc() {}
+
+    // ❌ Issue 6: Duplicate code (SonarCloud may catch this depending on rules)
+    function duplicate() {
+      let a = 1 + 1;
+      let b = 2 + 2;
+      let c = 3 + 3;
+    }
+
+    function duplicate2() {
+      let a = 1 + 1;
+      let b = 2 + 2;
+      let c = 3 + 3;
+    }
+
+    // Chart.js example (valid)
+    new Chart(document.getElementById("buggyChart"), {
+      type: "bar",
       data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        labels: ["Jan", "Feb", "Mar"],
         datasets: [{
-          label: 'Orders',
-          data: [300, 450, 520, 680, 1000, 900],
-          backgroundColor: '#007bff',
-          borderRadius: 8
+          label: "Example",
+          data: [10, 20, 30],
+          backgroundColor: "red"
         }]
-      },
-      options: {
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        }
-      }
-    });
-
-    new Chart(document.getElementById('inventoryChart'), {
-      type: 'line',
-      data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [{
-          label: 'Inventory',
-          data: [800, 750, 620, 710, 690, 670],
-          borderColor: '#28a745',
-          backgroundColor: 'rgba(40, 167, 69, 0.2)',
-          fill: true,
-          tension: 0.3
-        }]
-      },
-      options: {
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        }
       }
     });
   </script>
