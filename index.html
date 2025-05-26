@@ -1,230 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Supply Chain Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
-      background-color: #f0f2f5;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    .dashboard-header {
-      padding: 20px 0;
-    }
-
-    .card {
-      border: none;
-      border-radius: 1rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-
-    .card h4 {
-      font-weight: 600;
-    }
-
-    .status-badge {
-      padding: 6px 12px;
-      border-radius: 30px;
-      color: #fff;
-      font-size: 0.85rem;
-      font-weight: 500;
-    }
-
-    .status-in-transit {
-      background-color: #ffc107;
-    }
-
-    .status-delayed {
-      background-color: #dc3545;
-    }
-
-    .status-dispatched {
-      background-color: #28a745;
-    }
-
-    .chart-container {
-      position: relative;
-      height: 300px;
-    }
-
-    .note {
-      color: red;
-      font-weight: bold;
-    }
+    .card { padding: 1rem; margin: 1rem 0; box-shadow: 0 0 8px rgba(0,0,0,0.1); border-radius: 8px; }
+    .text-primary { color: #007bff; }
+    .text-warning { color: #ffc107; }
+    .text-danger { color: #dc3545; }
+    .text-muted { color: #6c757d; }
+    .d-flex { display: flex; justify-content: space-between; align-items: center; }
+    .note { color: red; font-weight: bold; }
   </style>
 </head>
-
 <body>
-  <div class="note">Deprecated tag removed. Use CSS instead.</div>
-  <div class="container py-4">
-    <div class="dashboard-header d-flex justify-content-between align-items-center">
-      <h2 class="fw-bold" id="headerTitle">📦 Supply Chain Management Dashboard</h2>
-      <button class="btn btn-outline-primary" onclick="alert('Logged!')">Log</button>
-    </div>
 
-    <!-- Stat Cards -->
-    <div class="row g-4 mb-4">
-      <div class="col-md-3">
-        <div class="card text-center p-4">
-          <h4 class="text-primary" id="itemsInStock">1,270</h4>
-          <p class="text-muted mb-0">Items in Stock</p>
-        </div>
+  <div class="card">
+    <div class="d-flex">
+      <div>
+        <h6 class="text-muted text-uppercase">Items in Stock</h6>
+        <h4 class="text-primary" id="itemsInStock">1270</h4>
       </div>
-      <div class="col-md-3">
-        <div class="card text-center p-4">
-          <h4 class="text-warning" id="pendingOrders">84</h4>
-          <p class="text-muted mb-0">Pending Orders</p>
-        </div>
+      <div>
+        <h6 class="text-muted text-uppercase">Pending Orders</h6>
+        <h4 class="text-warning" id="pendingOrders">84</h4>
       </div>
-      <div class="col-md-3">
-        <div class="card text-center p-4">
-          <h4 class="text-success">36</h4>
-          <p class="text-muted mb-0 text-primary">Shipments</p>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card text-center p-4">
-          <h4 class="text-info">18</h4>
-          <p class="text-muted mb-0">Suppliers</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Graceful broken image -->
-    <img src="missing.jpg" alt="Image not found" style="max-width:100%; height:auto;" onerror="this.style.display='none'" />
-
-    <!-- Charts -->
-    <div class="row g-4 mb-4">
-      <div class="col-md-6">
-        <div class="card p-4">
-          <h5 class="mb-4">📊 Monthly Order Volume</h5>
-          <div class="chart-container">
-            <canvas id="orderChart"></canvas>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card p-4">
-          <h5 class="mb-4">📈 Inventory Levels</h5>
-          <div class="chart-container">
-            <canvas id="inventoryChart"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="row g-4 mb-4">
-      <div class="col-md-6">
-        <div class="card p-4">
-          <h5 class="mb-4">🚚 Shipment Status Breakdown</h5>
-          <div class="chart-container">
-            <canvas id="shipmentPieChart"></canvas>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card p-4">
-          <h5 class="mb-4">📦 Supplier Contributions</h5>
-          <div class="chart-container">
-            <canvas id="supplierChart"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Table -->
-    <div class="card p-4">
-      <h5 class="mb-4">🚚 Recent Shipments</h5>
-      <div class="table-responsive">
-        <table class="table table-striped align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>Shipment ID</th>
-              <th>Destination</th>
-              <th>Status</th>
-              <th>Expected Arrival</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><a href="javascript:void(0);">SHIP1234</a></td>
-              <td>New York</td>
-              <td><span class="status-badge status-in-transit">In Transit</span></td>
-              <td>May 2, 2025</td>
-            </tr>
-            <tr>
-              <td><a href="javascript:void(0);">SHIP1235</a></td>
-              <td>San Francisco</td>
-              <td><span class="status-badge status-delayed">Delayed</span></td>
-              <td>May 5, 2025</td>
-            </tr>
-            <tr>
-              <td><a href="javascript:void(0);">SHIP1236</a></td>
-              <td>Dallas</td>
-              <td><span class="status-badge status-dispatched">Dispatched</span></td>
-              <td>May 1, 2025</td>
-            </tr>
-          </tbody>
-        </table>
+      <div>
+        <h6 class="text-muted text-uppercase">Alerts</h6>
+        <h4 class="text-danger" id="alerts">4</h4>
       </div>
     </div>
   </div>
 
-  <!-- Chart Scripts -->
+  <div class="card">
+    <h5 class="text-muted text-uppercase">Recent Orders</h5>
+    <ul>
+      <li><a href="javascript:void(0);">SHIP1234</a> - Delivered</li>
+      <li><a href="javascript:void(0);">SHIP1235</a> - In Transit</li>
+      <li><a href="javascript:void(0);">SHIP1236</a> - Pending</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h5 class="text-muted text-uppercase">Order Chart</h5>
+    <canvas id="orderChart" width="400" height="200"></canvas>
+  </div>
+
+  <div class="card">
+    <h5 class="note">Deprecated tag removed. Use CSS classes instead.</h5>
+  </div>
+
+  <div class="card">
+    <h5>Product Image</h5>
+    <img src="missing.jpg" alt="Product preview" onerror="this.style.display='none'" width="150" />
+  </div>
+
   <script>
-    new Chart(document.getElementById('orderChart'), {
+    const ctx = document.getElementById('orderChart').getContext('2d');
+    new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
         datasets: [{
           label: 'Orders',
-          data: [300, 450, 520, 680, 1000, 900],
-          backgroundColor: '#007bff',
-          borderRadius: 8
-        }]
-      },
-      options: {
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        }
-      }
-    });
-
-    new Chart(document.getElementById('inventoryChart'), {
-      type: 'line',
-      data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [{
-          label: 'Inventory',
-          data: [500, 600, 550, 700, 850, 800],
-          borderColor: '#28a745',
-          backgroundColor: 'rgba(40,167,69,0.1)',
-          tension: 0.4
+          data: [65, 59, 80, 81, 56],
+          backgroundColor: 'rgba(75, 192, 192, 0.6)'
         }]
       },
       options: {
         responsive: true,
-        scales: {
-          y: {
-            beginAtZero: true
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          title: {
+            display: true,
+            text: 'Monthly Orders Overview'
           }
         }
       }
     });
-
-    // You can similarly initialize the other charts
   </script>
-</body>
 
+</body>
 </html>
