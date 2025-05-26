@@ -19,7 +19,7 @@ jobs:
   sonarcloud:
     runs-on: ubuntu-latest
     outputs:
-      quality_gate: ${{ steps.quality-gate.outputs.quality_gate_status }}
+      quality_gate: ${{ steps.quality-gate.outputs['quality-gate-status'] }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,13 +32,11 @@ jobs:
       - name: Wait for Quality Gate result
         id: quality-gate
         uses: SonarSource/sonarqube-quality-gate-action@v1.1.0
-        with:
-          scanTimeout: 300
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Debug Quality Gate output
-        run: echo "Quality Gate Status = ${{ steps.quality-gate.outputs.quality_gate_status }}"
+        run: echo "Quality Gate Status = ${{ steps.quality-gate.outputs['quality-gate-status'] }}"
 
   deploy-and-notify:
     needs: sonarcloud
@@ -58,7 +56,7 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'  # root directory with your static HTML files (index.html, etc)
+          path: '.'  # root directory with your static HTML files
 
       - name: Deploy to GitHub Pages
         id: deployment
