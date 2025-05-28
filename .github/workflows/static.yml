@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -17,51 +16,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-symbol-check:
+  check-symbols:
     runs-on: ubuntu-latest
     outputs:
-      symbol_status: ${{ steps.symbolcheck.outputs.status }}
+      status: ${{ steps.symbol_check.outputs.status }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          node-version: '18'
+          python-version: '3.x'
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Symbol Check
-        id: symbolcheck
+      - name: Run symbol_check.py script
+        id: symbol_check
         run: |
-          output=$(node scripts/symbol-check.js 2>&1 || true)
+          output=$(python3 symbol_check.py 2>&1 || true)
           echo "$output"
           if echo "$output" | grep -iq "error"; then
             echo "status=FAILED" >> $GITHUB_OUTPUT
-            echo "::error file=scripts/symbol-check.js::Symbol check failed:\n$output"
+            echo "::error file=symbol_check.py::Symbol check failed with errors:\n$output"
           else
             echo "status=PASSED" >> $GITHUB_OUTPUT
-            echo "Symbol check passed."
+            echo "Symbol check passed without errors."
           fi
 
-      - name: Fix using OpenAI (if symbols failed)
-        if: steps.symbolcheck.outputs.status == 'FAILED'
-        run: |
-          echo "Running OpenAI fix..."
-          npm install openai
-          node scripts/fix-symbols-with-openai.js
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-      - name: Re-run Symbol Check
-        if: steps.symbolcheck.outputs.status == 'FAILED'
-        run: node scripts/symbol-check.js
-
   sonarcloud:
-    needs: build-and-symbol-check
+    needs: check-symbols
     runs-on: ubuntu-latest
     if: always()
     outputs:
