@@ -16,11 +16,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  symbol-check:
+  precheck:
     runs-on: ubuntu-latest
     outputs:
-      symbol_status: ${{ steps.check-symbol.outputs.status }}
-      error_message: ${{ steps.check-symbol.outputs.error }}
+      symbol_check_status: ${{ steps.check-symbol.outputs.status }}
+      symbol_check_error: ${{ steps.check-symbol.outputs.error }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,42 +28,39 @@ jobs:
       - name: Run symbol_check.py
         id: check-symbol
         run: |
+          set +e
           output=$(python3 symbol_check.py 2>&1)
+          exit_code=$?
+          set -e
+
           status="PASSED"
           error=""
-          if echo "$output" | grep -i "error"; then
+          if [[ $exit_code -ne 0 || "$output" == *"error"* ]]; then
             status="FAILED"
             error="$output"
           fi
+
           echo "status=$status" >> $GITHUB_OUTPUT
           echo "error<<EOF" >> $GITHUB_OUTPUT
           echo "$error" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
   manual-approval:
-    needs: symbol-check
-    if: needs.symbol-check.outputs.symbol_status == 'FAILED'
+    if: needs.precheck.outputs.symbol_check_status == 'FAILED'
+    needs: precheck
     runs-on: ubuntu-latest
-    outputs:
-      approved: ${{ steps.approval.outputs.approved }}
+    environment:
+      name: approval-required
+      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      - name: Print Error and Request Manual Approval
-        id: approval
+      - name: Display symbol check errors
         run: |
-          echo "❌ symbol_check.py failed with the following error:"
-          echo "${{ needs.symbol-check.outputs.error_message }}"
-          echo ""
-          echo "::notice::Please approve manually to continue SonarCloud analysis."
-          echo "approved=false" >> $GITHUB_OUTPUT
-        # Wait for approval
-      - name: Wait for Approval
-        uses: hmarr/auto-approve-action@v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          echo "Manual approval required due to symbol check failure:"
+          echo "${{ needs.precheck.outputs.symbol_check_error }}"
 
   sonarcloud:
-    needs: [symbol-check, manual-approval]
-    if: needs.symbol-check.outputs.symbol_status == 'PASSED' || needs.manual-approval.result == 'success'
+    needs: [precheck, manual-approval]
+    if: needs.precheck.outputs.symbol_check_status == 'PASSED' || always()
     runs-on: ubuntu-latest
     outputs:
       quality_gate: ${{ steps.quality-gate.outputs['quality-gate-status'] }}
@@ -87,8 +84,8 @@ jobs:
 
   deploy-and-notify:
     needs: sonarcloud
-    runs-on: ubuntu-latest
     if: needs.sonarcloud.outputs.quality_gate == 'PASSED'
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
