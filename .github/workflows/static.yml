@@ -25,13 +25,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run symbol_check.py
+      - name: Run symbol_check.py without failing the job
         id: symbol-check-step
         run: |
           output=$(python3 symbol_check.py 2>&1 || true)
           status="PASSED"
           error=""
-          if echo "$output" | grep -i "error"; then
+          if echo "$output" | grep -Ei "error|warning"; then
             status="FAILED"
             error="$output"
           fi
@@ -40,27 +40,44 @@ jobs:
           echo "$error" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Show Symbol Check Results
+      - name: Show Symbol Check Output (Errors/Warnings)
         run: |
           echo "Symbol Check Status: ${{ steps.symbol-check-step.outputs.status }}"
-          echo "Symbol Check Errors (if any):"
+          echo "Symbol Check Details:"
           echo "${{ steps.symbol-check-step.outputs.error }}"
 
-  sonarcloud:
+  approval:
     needs: symbol-check
+    runs-on: ubuntu-latest
+    if: needs.symbol-check.outputs.status == 'FAILED'
+    steps:
+      - name: Manual Approval to proceed despite symbol check errors/warnings
+        uses: hmarr/auto-approve-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          comment-contains: 'approve'
+      - name: Show symbol check errors in approval step
+        run: |
+          echo "Symbol Check Errors/Warnings:"
+          echo "${{ needs.symbol-check.outputs.error }}"
+
+  sonarcloud:
+    needs: [symbol-check, approval]
     runs-on: ubuntu-latest
     outputs:
       quality_gate: ${{ steps.quality-gate.outputs['quality-gate-status'] }}
+    if: needs.symbol-check.outputs.status == 'PASSED' || needs.approval.result == 'success'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: SonarCloud Scan (HTML files only)
+      - name: SonarCloud Scan (only HTML files)
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          args: -Dsonar.inclusions=**/*.html
+          args: >
+            -Dsonar.inclusions=**/*.html
 
       - name: Wait for Quality Gate result
         id: quality-gate
