@@ -16,7 +16,46 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  symbol-check:
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.check-symbols.outputs.proceed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      - name: Run symbol check script
+        id: check-symbols
+        run: |
+          python symbol_check.py > result.log || true
+          if grep -q "❌" result.log; then
+            echo "⚠️ Issues found in symbol check!"
+            echo "proceed=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ No issues found in symbol check."
+            echo "proceed=true" >> $GITHUB_OUTPUT
+          fi
+
+  # OPTIONAL: You can create a manual approval job here if needed
+  manual-approval:
+    if: needs.symbol-check.outputs.proceed == 'false'
+    needs: symbol-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for manual approval
+        run: |
+          echo "❗ Symbol check failed. Manual approval required."
+          echo "You can approve this job manually in the GitHub UI."
+          exit 1
+
   sonarcloud:
+    if: needs.symbol-check.outputs.proceed == 'true'
+    needs: symbol-check
     runs-on: ubuntu-latest
     outputs:
       quality_gate: ${{ steps.quality-gate.outputs['quality-gate-status'] }}
