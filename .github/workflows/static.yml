@@ -28,11 +28,14 @@ jobs:
       - name: Run symbol_check.py script
         id: symbol_check
         run: |
+          # Run your python script, capture output, prevent failure to not stop workflow
           output=$(python3 symbol_check.py 2>&1 || true)
           echo "$output"
 
+          # Check if output contains "error" (case-insensitive)
           if echo "$output" | grep -iq "error"; then
             echo "status=FAILED" >> $GITHUB_OUTPUT
+            # Show error annotation in GitHub Actions UI
             echo "::error file=symbol_check.py::Symbol check failed with errors:\n$output"
           else
             echo "status=PASSED" >> $GITHUB_OUTPUT
@@ -42,7 +45,7 @@ jobs:
   sonarcloud:
     needs: check-symbols
     runs-on: ubuntu-latest
-    if: always()
+    if: always()  # Always run SonarCloud scan no matter what
     outputs:
       quality_gate: ${{ steps.quality-gate.outputs.quality-gate-status }}
 
@@ -99,6 +102,7 @@ jobs:
           -d '{"event_type":"dev-completed"}'
 
       - name: Send email notification
+        # This step only runs if deployment happened (i.e., Quality Gate PASSED)
         if: always()
         uses: dawidd6/action-send-mail@v3
         with:
