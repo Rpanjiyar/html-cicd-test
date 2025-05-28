@@ -25,16 +25,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
       - name: Run symbol_check.py script
         id: symbol_check
         run: |
           output=$(python3 symbol_check.py 2>&1 || true)
           echo "$output"
+
           if echo "$output" | grep -iq "error"; then
             echo "status=FAILED" >> $GITHUB_OUTPUT
             echo "::error file=symbol_check.py::Symbol check failed with errors:\n$output"
@@ -59,7 +55,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          args: >
+          args: > 
             -Dsonar.inclusions=**/*.html
 
       - name: Wait for Quality Gate result
