@@ -16,37 +16,41 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check-symbols:
+  symbol-check:
     runs-on: ubuntu-latest
     outputs:
-      status: ${{ steps.symbol_check.outputs.status }}
-
+      status: ${{ steps.symbol-check-step.outputs.status }}
+      error: ${{ steps.symbol-check-step.outputs.error }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run symbol_check.py script
-        id: symbol_check
+      - name: Run symbol_check.py
+        id: symbol-check-step
         run: |
-          # Run your python script, capture output, prevent failure to not stop workflow
           output=$(python3 symbol_check.py 2>&1 || true)
-          echo "$output"
-
-          # Check if output contains "error" (case-insensitive)
-          if echo "$output" | grep -iq "error"; then
-            echo "status=FAILED" >> $GITHUB_OUTPUT
-            # Show error annotation in GitHub Actions UI
-            echo "::error file=symbol_check.py::Symbol check failed with errors:\n$output"
-          else
-            echo "status=PASSED" >> $GITHUB_OUTPUT
-            echo "Symbol check passed without errors."
+          status="PASSED"
+          error=""
+          if echo "$output" | grep -i "error"; then
+            status="FAILED"
+            error="$output"
           fi
+          echo "status=$status" >> $GITHUB_OUTPUT
+          echo "error<<EOF" >> $GITHUB_OUTPUT
+          echo "$error" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Show Symbol Check Results
+        run: |
+          echo "Symbol Check Status: ${{ steps.symbol-check-step.outputs.status }}"
+          echo "Symbol Check Errors (if any):"
+          echo "${{ steps.symbol-check-step.outputs.error }}"
 
   sonarcloud:
-    needs: check-symbols
+    needs: symbol-check
     runs-on: ubuntu-latest
-    if: always()  # Always run SonarCloud scan no matter what
-
+    outputs:
+      quality_gate: ${{ steps.quality-gate.outputs['quality-gate-status'] }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,8 +60,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          args: > 
-            -Dsonar.inclusions=**/*.html
+          args: -Dsonar.inclusions=**/*.html
 
       - name: Wait for Quality Gate result
         id: quality-gate
