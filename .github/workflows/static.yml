@@ -2,8 +2,7 @@ name: Static Site CI/CD with SonarCloud
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -16,51 +15,58 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  precheck:
+  symbol-check:
     runs-on: ubuntu-latest
     outputs:
-      symbol_check_status: ${{ steps.check-symbol.outputs.status }}
-      symbol_check_error: ${{ steps.check-symbol.outputs.error }}
+      status: ${{ steps.check-symbols.outputs.status }}
+      error: ${{ steps.check-symbols.outputs.error }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run symbol_check.py
-        id: check-symbol
+      - name: Run Python symbol check
+        id: check-symbols
         run: |
-          set +e
           output=$(python3 symbol_check.py 2>&1)
-          exit_code=$?
-          set -e
-
           status="PASSED"
           error=""
-          if [[ $exit_code -ne 0 || "$output" == *"error"* ]]; then
+          if echo "$output" | grep -i "error"; then
             status="FAILED"
             error="$output"
           fi
-
           echo "status=$status" >> $GITHUB_OUTPUT
           echo "error<<EOF" >> $GITHUB_OUTPUT
           echo "$error" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-  manual-approval:
-    if: needs.precheck.outputs.symbol_check_status == 'FAILED'
-    needs: precheck
+  approval-if-needed:
+    needs: symbol-check
+    if: needs.symbol-check.outputs.status == 'FAILED'
     runs-on: ubuntu-latest
     environment:
-      name: approval-required
-    outputs:
-      approved: "true"
+      name: manual-approval-needed
+      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      - name: Show symbol check errors
-        run: echo "${{ needs.precheck.outputs.symbol_check_error }}"
+      - name: Wait for Manual Approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: ${{ github.actor }}
+          minimum-approvals: 1
+          issue-title: "Manual approval required: Symbol check failed"
+          issue-body: |
+            ⚠️ Python symbol check found errors in the code:
+            
+            ```
+            ${{ needs.symbol-check.outputs.error }}
+            ```
 
-      - name: Await Manual Approval
-        run: echo "Awaiting manual approval..."
+            Please approve this step if you want to proceed anyway.
+          exclude-workflow-initiator-as-approver: false
 
   sonarcloud:
+    needs: [symbol-check, approval-if-needed]
+    if: needs.symbol-check.outputs.status == 'PASSED' || always()
     runs-on: ubuntu-latest
     outputs:
       quality_gate: ${{ steps.quality-gate.outputs['quality-gate-status'] }}
@@ -68,7 +74,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: SonarCloud Scan
+      - name: SonarCloud Scan (uses sonar-project.properties)
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -79,18 +85,17 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      - name: Log Quality Gate result
+      - name: Debug Quality Gate output
         run: echo "Quality Gate Status = ${{ steps.quality-gate.outputs['quality-gate-status'] }}"
 
   deploy-and-notify:
-    needs: [precheck, manual-approval, sonarcloud]
-    if: |
-      (needs.precheck.outputs.symbol_check_status == 'PASSED' || needs.manual-approval.result == 'success') &&
-      needs.sonarcloud.outputs.quality_gate == 'PASSED'
+    needs: sonarcloud
+    if: needs.sonarcloud.outputs.quality_gate == 'PASSED'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -101,7 +106,7 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '.'  # Directory with HTML files
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -115,6 +120,7 @@ jobs:
           -d '{"event_type":"dev-completed"}'
 
       - name: Send email notification
+        if: always()
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
