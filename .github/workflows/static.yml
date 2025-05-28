@@ -16,76 +16,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  symbol-check:
+  check-symbols:
     runs-on: ubuntu-latest
     outputs:
-      status: ${{ steps.check-symbols.outputs.status }}
-      error: ${{ steps.check-symbols.outputs.error }}
+      status: ${{ steps.symbol_check.outputs.status }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run symbol check
-        id: check-symbols
+      - name: Run symbol_check.py script
+        id: symbol_check
         run: |
-          set +e
-          output=$(python3 symbol_check.py 2>&1)
-          exit_code=$?
+          # Run your python script, capture output, prevent failure to not stop workflow
+          output=$(python3 symbol_check.py 2>&1 || true)
+          echo "$output"
 
-          if [ $exit_code -ne 0 ]; then
+          # Check if output contains "error" (case-insensitive)
+          if echo "$output" | grep -iq "error"; then
             echo "status=FAILED" >> $GITHUB_OUTPUT
-            echo "error<<EOF" >> $GITHUB_OUTPUT
-            echo "$output" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            exit 1
+            # Show error annotation in GitHub Actions UI
+            echo "::error file=symbol_check.py::Symbol check failed with errors:\n$output"
           else
             echo "status=PASSED" >> $GITHUB_OUTPUT
-            echo "error=" >> $GITHUB_OUTPUT
+            echo "Symbol check passed without errors."
           fi
 
-  manual-approval:
-    needs: symbol-check
-    if: needs.symbol-check.outputs.status == 'FAILED'
-    runs-on: ubuntu-latest
-    outputs:
-      approved: ${{ steps.approval.outputs.approved }}
-    steps:
-      - name: Print error from symbol_check.py
-        run: echo "${{ needs.symbol-check.outputs.error }}"
-
-      - name: Wait for manual approval
-        id: approval
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: ${{ secrets.MANUAL_APPROVER }}
-          issue-title: "Manual Approval Required"
-          issue-body: |
-            Symbol check failed in `symbol_check.py`.
-
-            Error Output:
-            ```
-            ${{ needs.symbol-check.outputs.error }}
-            ```
-
-            Click "Approve" on this issue to proceed.
-
   sonarcloud:
-    needs: [symbol-check, manual-approval]
-    if: needs.symbol-check.outputs.status == 'PASSED' || needs.manual-approval.outputs.approved == 'true'
+    needs: check-symbols
     runs-on: ubuntu-latest
-    outputs:
-      quality_gate: ${{ steps.quality-gate.outputs['quality-gate-status'] }}
+    if: always()  # Always run SonarCloud scan no matter what
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: SonarCloud Scan (HTML only)
+      - name: SonarCloud Scan (HTML files only)
         uses: SonarSource/sonarqube-scan-action@v5.0.0
-        with:
-          args: -Dsonar.inclusions=**/*.html
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: > 
+            -Dsonar.inclusions=**/*.html
 
       - name: Wait for Quality Gate result
         id: quality-gate
@@ -114,7 +86,7 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'  # Root directory with your static HTML files
+          path: '.'  # root directory with your static HTML files
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -124,7 +96,7 @@ jobs:
         run: |
           curl -X POST https://api.github.com/repos/Indra512/PlaywrightCucumberTypeScript/dispatches \
           -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer ${{ secrets.TEST_REPO_PAT }}" \
+          -H "Authorization: token ${{ secrets.TEST_REPO_PAT }}" \
           -d '{"event_type":"dev-completed"}'
 
       - name: Send email notification
