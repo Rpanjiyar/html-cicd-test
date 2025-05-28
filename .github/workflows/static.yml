@@ -19,43 +19,51 @@ jobs:
   symbol-check:
     runs-on: ubuntu-latest
     outputs:
-      proceed: ${{ steps.check-symbols.outputs.proceed }}
+      symbol_status: ${{ steps.check-symbol.outputs.status }}
+      error_message: ${{ steps.check-symbol.outputs.error }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.x
-
-      - name: Run symbol check script
-        id: check-symbols
+      - name: Run symbol_check.py
+        id: check-symbol
         run: |
-          python symbol_check.py > result.log || true
-          if grep -q "❌" result.log; then
-            echo "⚠️ Issues found in symbol check!"
-            echo "proceed=false" >> $GITHUB_OUTPUT
-          else
-            echo "✅ No issues found in symbol check."
-            echo "proceed=true" >> $GITHUB_OUTPUT
+          output=$(python3 symbol_check.py 2>&1)
+          status="PASSED"
+          error=""
+          if echo "$output" | grep -i "error"; then
+            status="FAILED"
+            error="$output"
           fi
+          echo "status=$status" >> $GITHUB_OUTPUT
+          echo "error<<EOF" >> $GITHUB_OUTPUT
+          echo "$error" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-  # OPTIONAL: You can create a manual approval job here if needed
   manual-approval:
-    if: needs.symbol-check.outputs.proceed == 'false'
     needs: symbol-check
+    if: needs.symbol-check.outputs.symbol_status == 'FAILED'
     runs-on: ubuntu-latest
+    outputs:
+      approved: ${{ steps.approval.outputs.approved }}
     steps:
-      - name: Wait for manual approval
+      - name: Print Error and Request Manual Approval
+        id: approval
         run: |
-          echo "❗ Symbol check failed. Manual approval required."
-          echo "You can approve this job manually in the GitHub UI."
-          exit 1
+          echo "❌ symbol_check.py failed with the following error:"
+          echo "${{ needs.symbol-check.outputs.error_message }}"
+          echo ""
+          echo "::notice::Please approve manually to continue SonarCloud analysis."
+          echo "approved=false" >> $GITHUB_OUTPUT
+        # Wait for approval
+      - name: Wait for Approval
+        uses: hmarr/auto-approve-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   sonarcloud:
-    if: needs.symbol-check.outputs.proceed == 'true'
-    needs: symbol-check
+    needs: [symbol-check, manual-approval]
+    if: needs.symbol-check.outputs.symbol_status == 'PASSED' || needs.manual-approval.result == 'success'
     runs-on: ubuntu-latest
     outputs:
       quality_gate: ${{ steps.quality-gate.outputs['quality-gate-status'] }}
@@ -84,7 +92,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
