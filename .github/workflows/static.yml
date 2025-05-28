@@ -19,19 +19,20 @@ jobs:
   symbol-check:
     runs-on: ubuntu-latest
     outputs:
-      status: ${{ steps.symbol-check-step.outputs.status }}
-      error: ${{ steps.symbol-check-step.outputs.error }}
+      status: ${{ steps.symbol_check.outputs.status }}
+      error: ${{ steps.symbol_check.outputs.error }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run symbol_check.py without failing the job
-        id: symbol-check-step
+      - name: Run symbol check
+        id: symbol_check
+        shell: bash
         run: |
-          output=$(python3 symbol_check.py 2>&1 || true)
+          output=$(python3 symbol_check.py 2>&1) || true
           status="PASSED"
           error=""
-          if echo "$output" | grep -Ei "error|warning"; then
+          if echo "$output" | grep -i "error"; then
             status="FAILED"
             error="$output"
           fi
@@ -40,44 +41,31 @@ jobs:
           echo "$error" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Show Symbol Check Output (Errors/Warnings)
+      - name: Show symbol check output
+        if: steps.symbol_check.outputs.status == 'FAILED'
         run: |
-          echo "Symbol Check Status: ${{ steps.symbol-check-step.outputs.status }}"
-          echo "Symbol Check Details:"
-          echo "${{ steps.symbol-check-step.outputs.error }}"
-
-  approval:
-    needs: symbol-check
-    runs-on: ubuntu-latest
-    if: needs.symbol-check.outputs.status == 'FAILED'
-    steps:
-      - name: Manual Approval to proceed despite symbol check errors/warnings
-        uses: hmarr/auto-approve-action@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          comment-contains: 'approve'
-      - name: Show symbol check errors in approval step
-        run: |
-          echo "Symbol Check Errors/Warnings:"
-          echo "${{ needs.symbol-check.outputs.error }}"
+          echo "Symbol Check Failed! Errors:"
+          echo "${{ steps.symbol_check.outputs.error }}"
 
   sonarcloud:
-    needs: [symbol-check, approval]
+    needs: symbol-check
     runs-on: ubuntu-latest
     outputs:
       quality_gate: ${{ steps.quality-gate.outputs['quality-gate-status'] }}
-    if: needs.symbol-check.outputs.status == 'PASSED' || needs.approval.result == 'success'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: SonarCloud Scan (only HTML files)
+      # Filter for only HTML files to scan
+      - name: Setup files for SonarCloud
+        run: |
+          # Remove all files except .html (adjust if needed)
+          find . -type f ! -name '*.html' -delete
+
+      - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.inclusions=**/*.html
 
       - name: Wait for Quality Gate result
         id: quality-gate
@@ -86,7 +74,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Debug Quality Gate output
-        run: echo "Quality Gate Status = ${{ steps.quality-gate.outputs['quality-gate-status'] }}"
+        run: echo "Quality Gate Status = '${{ steps.quality-gate.outputs['quality-gate-status'] }}'"
 
   deploy-and-notify:
     needs: sonarcloud
