@@ -2,7 +2,8 @@ name: Static Site CI/CD with SonarCloud
 
 on:
   push:
-    branches: [master]
+    branches:
+      - master
   workflow_dispatch:
 
 permissions:
@@ -24,7 +25,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Python symbol check
+      - name: Run symbol check
         id: check-symbols
         run: |
           output=$(python3 symbol_check.py 2>&1)
@@ -39,34 +40,32 @@ jobs:
           echo "$error" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-  approval-if-needed:
+  manual-approval-if-needed:
     needs: symbol-check
-    if: needs.symbol-check.outputs.status == 'FAILED'
     runs-on: ubuntu-latest
-    environment:
-      name: manual-approval-needed
-      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    if: needs.symbol-check.outputs.status == 'FAILED'
+    outputs:
+      approved: ${{ steps.approve.outputs.approved }}
     steps:
-      - name: Wait for Manual Approval
+      - name: Display errors from symbol_check.py
+        run: |
+          echo "${{ needs.symbol-check.outputs.error }}"
+
+      - name: Wait for manual approval to continue
+        id: approve
         uses: trstringer/manual-approval@v1
         with:
           secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: ${{ github.actor }}
-          minimum-approvals: 1
-          issue-title: "Manual approval required: Symbol check failed"
-          issue-body: |
-            ⚠️ Python symbol check found errors in the code:
-            
-            ```
-            ${{ needs.symbol-check.outputs.error }}
-            ```
-
-            Please approve this step if you want to proceed anyway.
-          exclude-workflow-initiator-as-approver: false
+          prompt: "Symbol check found issues. Approve to continue to SonarCloud?"
+          approvers: alokbansal
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   sonarcloud:
-    needs: [symbol-check, approval-if-needed]
-    if: needs.symbol-check.outputs.status == 'PASSED' || always()
+    needs: [symbol-check, manual-approval-if-needed]
+    if: |
+      needs.symbol-check.outputs.status == 'PASSED' ||
+      needs.manual-approval-if-needed.outputs.approved == 'true'
     runs-on: ubuntu-latest
     outputs:
       quality_gate: ${{ steps.quality-gate.outputs['quality-gate-status'] }}
@@ -74,8 +73,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: SonarCloud Scan (uses sonar-project.properties)
+      - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
+        with:
+          args: >
+            -Dsonar.projectKey=your_project_key
+            -Dsonar.organization=your_organization
+            -Dsonar.sources=.
+            -Dsonar.inclusions=**/*.html
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -90,12 +95,11 @@ jobs:
 
   deploy-and-notify:
     needs: sonarcloud
-    if: needs.sonarcloud.outputs.quality_gate == 'PASSED'
     runs-on: ubuntu-latest
+    if: needs.sonarcloud.outputs.quality_gate == 'PASSED'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -106,7 +110,7 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'  # Directory with HTML files
+          path: '.'  # root directory with your static HTML files
 
       - name: Deploy to GitHub Pages
         id: deployment
