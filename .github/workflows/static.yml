@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -16,36 +17,53 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check-symbols:
+  build-and-symbol-check:
     runs-on: ubuntu-latest
     outputs:
-      status: ${{ steps.symbol_check.outputs.status }}
+      symbol_status: ${{ steps.symbolcheck.outputs.status }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run symbol_check.py script
-        id: symbol_check
-        run: |
-          # Run your python script, capture output, prevent failure to not stop workflow
-          output=$(python3 symbol_check.py 2>&1 || true)
-          echo "$output"
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-          # Check if output contains "error" (case-insensitive)
+      - name: Install dependencies
+        run: npm install
+
+      - name: Symbol Check
+        id: symbolcheck
+        run: |
+          output=$(node scripts/symbol-check.js 2>&1 || true)
+          echo "$output"
           if echo "$output" | grep -iq "error"; then
             echo "status=FAILED" >> $GITHUB_OUTPUT
-            # Show error annotation in GitHub Actions UI
-            echo "::error file=symbol_check.py::Symbol check failed with errors:\n$output"
+            echo "::error file=scripts/symbol-check.js::Symbol check failed:\n$output"
           else
             echo "status=PASSED" >> $GITHUB_OUTPUT
-            echo "Symbol check passed without errors."
+            echo "Symbol check passed."
           fi
 
+      - name: Fix using OpenAI (if symbols failed)
+        if: steps.symbolcheck.outputs.status == 'FAILED'
+        run: |
+          echo "Running OpenAI fix..."
+          npm install openai
+          node scripts/fix-symbols-with-openai.js
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Re-run Symbol Check
+        if: steps.symbolcheck.outputs.status == 'FAILED'
+        run: node scripts/symbol-check.js
+
   sonarcloud:
-    needs: check-symbols
+    needs: build-and-symbol-check
     runs-on: ubuntu-latest
-    if: always()  # Always run SonarCloud scan no matter what
+    if: always()
     outputs:
       quality_gate: ${{ steps.quality-gate.outputs.quality-gate-status }}
 
@@ -58,7 +76,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          args: > 
+          args: >
             -Dsonar.inclusions=**/*.html
 
       - name: Wait for Quality Gate result
@@ -102,7 +120,6 @@ jobs:
           -d '{"event_type":"dev-completed"}'
 
       - name: Send email notification
-        # This step only runs if deployment happened (i.e., Quality Gate PASSED)
         if: always()
         uses: dawidd6/action-send-mail@v3
         with:
