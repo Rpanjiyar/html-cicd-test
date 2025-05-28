@@ -51,16 +51,16 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: approval-required
-      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    outputs:
+      approved: "true"
     steps:
-      - name: Display symbol check errors
-        run: |
-          echo "Manual approval required due to symbol check failure:"
-          echo "${{ needs.precheck.outputs.symbol_check_error }}"
+      - name: Show symbol check errors
+        run: echo "${{ needs.precheck.outputs.symbol_check_error }}"
+
+      - name: Await Manual Approval
+        run: echo "Awaiting manual approval..."
 
   sonarcloud:
-    needs: [precheck, manual-approval]
-    if: needs.precheck.outputs.symbol_check_status == 'PASSED' || always()
     runs-on: ubuntu-latest
     outputs:
       quality_gate: ${{ steps.quality-gate.outputs['quality-gate-status'] }}
@@ -79,12 +79,14 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      - name: Debug Quality Gate output
+      - name: Log Quality Gate result
         run: echo "Quality Gate Status = ${{ steps.quality-gate.outputs['quality-gate-status'] }}"
 
   deploy-and-notify:
-    needs: sonarcloud
-    if: needs.sonarcloud.outputs.quality_gate == 'PASSED'
+    needs: [precheck, manual-approval, sonarcloud]
+    if: |
+      (needs.precheck.outputs.symbol_check_status == 'PASSED' || needs.manual-approval.result == 'success') &&
+      needs.sonarcloud.outputs.quality_gate == 'PASSED'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -99,7 +101,7 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'  # root directory with your static HTML files
+          path: '.'
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -113,7 +115,6 @@ jobs:
           -d '{"event_type":"dev-completed"}'
 
       - name: Send email notification
-        if: always()
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
